@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="format-detection" content="telephone=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>المخزن</title>
 
 <style>
@@ -27,11 +28,14 @@ body{
 }
 
 .phone{
+    display:inline-block;
     font-size:32px;
     font-weight:bold;
     margin-top:10px;
-    text-decoration:none;
     color:black;
+    text-decoration:none;
+    direction:ltr;
+    unicode-bidi:bidi-override;
 }
 
 /* ===== CONTAINER ===== */
@@ -102,26 +106,20 @@ body{
 </div>
 
 <div class="container">
-
-    <!-- ===== TABS ===== -->
     <div class="tabs" id="tabs"></div>
-
-    <!-- ===== PRODUCTS ===== -->
     <div class="grid" id="products"></div>
-
 </div>
 
-<!-- ===== Firebase ===== -->
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* 🔥 بيانات Firebase */
+/* Firebase */
 const firebaseConfig = {
     apiKey: "AIzaSyAkIp0t7NVAkS6m9v39734r6-XHQUHtVgM",
     authDomain: "minamiladdistrubute.firebaseapp.com",
-    projectId: "minamiladdistrubute",
+    projectId: "minamiladdistrubute"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -131,40 +129,28 @@ const db = getFirestore(app);
    بيانات السوبر ماركت
 ===================== */
 
-// امسحي القديم لو كان غلط
-let savedStoreData = JSON.parse(localStorage.getItem("storeData"));
+let storeData = JSON.parse(localStorage.getItem("storeData")) || {
+    phone: "01273819198"
+};
 
-// الرقم الأساسي الصحيح
-const defaultPhone = "01273819198";
+/* تنظيف الرقم */
+function formatPhone(rawPhone){
+    let phone = String(rawPhone || "")
+        .replace(/[^\d]/g, '')   // إزالة أي رموز
+        .trim();
 
-// لو الرقم القديم مش صحيح يرجع للديفولت
-if (
-    !savedStoreData ||
-    !savedStoreData.phone ||
-    savedStoreData.phone.toString().length < 10
-) {
-    savedStoreData = {
-        phone: defaultPhone
-    };
+    if(phone.length === 10 && !phone.startsWith("0")){
+        phone = "0" + phone;
+    }
 
-    localStorage.setItem("storeData", JSON.stringify(savedStoreData));
+    return phone;
 }
 
-// تحويل الرقم إلى نص
-let phone = String(savedStoreData.phone).trim();
+let phone = formatPhone(storeData.phone);
 
-// تأكيد إنه يبدأ بـ 0
-if (!phone.startsWith("0")) {
-    phone = "0" + phone;
-}
-
-let phoneElement = document.getElementById("storePhone");
-
-// عرض الرقم
+const phoneElement = document.getElementById("storePhone");
 phoneElement.textContent = phone;
-
-// رابط الاتصال
-phoneElement.href = "tel:" + phone;
+phoneElement.setAttribute("href", "tel:" + phone);
 
 /* =====================
    المنتجات
@@ -173,23 +159,17 @@ phoneElement.href = "tel:" + phone;
 let allProducts = [];
 let currentCategory = "";
 
-/* تحميل المنتجات */
-async function loadProducts() {
-
+async function loadProducts(){
     const querySnapshot = await getDocs(collection(db, "products"));
-
     allProducts = [];
 
     querySnapshot.forEach(doc => {
-
         let data = doc.data();
 
-        let product = {
+        allProducts.push({
             name: data.name || "بدون اسم",
             category: data.category || "منتجات"
-        };
-
-        allProducts.push(product);
+        });
     });
 
     renderTabs();
@@ -202,43 +182,40 @@ loadProducts();
    التبويبات
 ===================== */
 
-function renderTabs() {
-
-    let tabs = document.getElementById("tabs");
+function renderTabs(){
+    const tabs = document.getElementById("tabs");
     tabs.innerHTML = "";
 
-    let categories = [...new Set(allProducts.map(p => p.category))];
+    const categories = [...new Set(allProducts.map(p => p.category))];
 
-    if (!currentCategory && categories.length > 0) {
+    if(!currentCategory && categories.length){
         currentCategory = categories[0];
     }
 
     categories.forEach(cat => {
         tabs.innerHTML += `
-            <button class="tab ${cat === currentCategory ? 'active' : ''}"
+            <button class="tab ${cat===currentCategory ? 'active' : ''}"
             onclick="selectCategory('${cat}')">${cat}</button>
         `;
     });
 }
 
-/* اختيار تبويب */
-window.selectCategory = function(cat) {
+window.selectCategory = function(cat){
     currentCategory = cat;
     renderTabs();
     renderProducts();
-}
+};
 
 /* =====================
    عرض المنتجات
 ===================== */
 
-function renderProducts() {
-
-    let container = document.getElementById("products");
+function renderProducts(){
+    const container = document.getElementById("products");
     container.innerHTML = "";
 
-    let filtered = allProducts.filter(
-        p => p.category === currentCategory && p.name
+    const filtered = allProducts.filter(p =>
+        p.category === currentCategory && p.name
     );
 
     filtered.forEach(p => {
