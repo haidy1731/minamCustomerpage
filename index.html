@@ -30,6 +30,8 @@ body{
     font-size:32px;
     font-weight:bold;
     margin-top:10px;
+    text-decoration:none;
+    color:black;
 }
 
 /* ===== CONTAINER ===== */
@@ -50,6 +52,7 @@ body{
     border:none;
     cursor:pointer;
     background:#ccc;
+    border-radius:8px;
 }
 
 .active{
@@ -95,17 +98,16 @@ body{
         <img src="logo.jpeg" alt="logo">
     </div>
 
-    <!-- خليه link عشان ينفع اتصال -->
     <a id="storePhone" class="phone"></a>
 </div>
 
 <div class="container">
 
-<!-- ===== TABS ===== -->
-<div class="tabs" id="tabs"></div>
+    <!-- ===== TABS ===== -->
+    <div class="tabs" id="tabs"></div>
 
-<!-- ===== PRODUCTS ===== -->
-<div class="grid" id="products"></div>
+    <!-- ===== PRODUCTS ===== -->
+    <div class="grid" id="products"></div>
 
 </div>
 
@@ -129,17 +131,39 @@ const db = getFirestore(app);
    بيانات السوبر ماركت
 ===================== */
 
-let storeData = JSON.parse(localStorage.getItem("storeData")) || {
-    phone:"01273819198"
-};
+// امسحي القديم لو كان غلط
+let savedStoreData = JSON.parse(localStorage.getItem("storeData"));
 
-let phone = String(storeData.phone);
+// الرقم الأساسي الصحيح
+const defaultPhone = "01273819198";
+
+// لو الرقم القديم مش صحيح يرجع للديفولت
+if (
+    !savedStoreData ||
+    !savedStoreData.phone ||
+    savedStoreData.phone.toString().length < 10
+) {
+    savedStoreData = {
+        phone: defaultPhone
+    };
+
+    localStorage.setItem("storeData", JSON.stringify(savedStoreData));
+}
+
+// تحويل الرقم إلى نص
+let phone = String(savedStoreData.phone).trim();
+
+// تأكيد إنه يبدأ بـ 0
+if (!phone.startsWith("0")) {
+    phone = "0" + phone;
+}
+
 let phoneElement = document.getElementById("storePhone");
 
-// عرض الرقم بشكل صحيح
+// عرض الرقم
 phoneElement.textContent = phone;
 
-// يخليه قابل للاتصال
+// رابط الاتصال
 phoneElement.href = "tel:" + phone;
 
 /* =====================
@@ -150,7 +174,7 @@ let allProducts = [];
 let currentCategory = "";
 
 /* تحميل المنتجات */
-async function loadProducts(){
+async function loadProducts() {
 
     const querySnapshot = await getDocs(collection(db, "products"));
 
@@ -178,28 +202,27 @@ loadProducts();
    التبويبات
 ===================== */
 
-function renderTabs(){
+function renderTabs() {
 
     let tabs = document.getElementById("tabs");
     tabs.innerHTML = "";
 
     let categories = [...new Set(allProducts.map(p => p.category))];
 
-    if(!currentCategory && categories.length > 0){
+    if (!currentCategory && categories.length > 0) {
         currentCategory = categories[0];
     }
 
     categories.forEach(cat => {
-
         tabs.innerHTML += `
-        <button class="tab ${cat===currentCategory ? 'active' : ''}"
-        onclick="selectCategory('${cat}')">${cat}</button>
+            <button class="tab ${cat === currentCategory ? 'active' : ''}"
+            onclick="selectCategory('${cat}')">${cat}</button>
         `;
     });
 }
 
 /* اختيار تبويب */
-window.selectCategory = function(cat){
+window.selectCategory = function(cat) {
     currentCategory = cat;
     renderTabs();
     renderProducts();
@@ -209,21 +232,20 @@ window.selectCategory = function(cat){
    عرض المنتجات
 ===================== */
 
-function renderProducts(){
+function renderProducts() {
 
     let container = document.getElementById("products");
     container.innerHTML = "";
 
-    let filtered = allProducts.filter(p => 
-        p.category === currentCategory && p.name
+    let filtered = allProducts.filter(
+        p => p.category === currentCategory && p.name
     );
 
     filtered.forEach(p => {
-
         container.innerHTML += `
-        <div class="card">
-            <div class="name">${p.name}</div>
-        </div>
+            <div class="card">
+                <div class="name">${p.name}</div>
+            </div>
         `;
     });
 }
